@@ -1,0 +1,173 @@
+// backend/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========================
+// User Authentication
+// ========================
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  password  String // Hashed password
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  forms     Form[] // User's created forms
+
+  @@map("users")
+}
+
+// ========================
+// Forms and Appearance
+// ========================
+model Form {
+  id          String        @id @default(uuid())
+  title       String
+  description String?
+  isPublished Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions   Question[]
+  responses   Response[]
+  visits      FormVisit[]
+  theme       Theme?
+  settings    FormSettings?
+
+  @@map("forms")
+}
+
+model Theme {
+  id              String @id @default(uuid())
+  formId          String @unique
+  form            Form   @relation(fields: [formId], references: [id], onDelete: Cascade)
+  primaryColor    String @default("#3b82f6")
+  backgroundColor String @default("#f8fafc")
+  fontFamily      String @default("Inter, sans-serif")
+
+  @@map("themes")
+}
+
+// ========================
+// Form Settings
+// ========================
+model FormSettings {
+  id                      String              @id @default(uuid())
+  formId                  String              @unique
+  form                    Form                @relation(fields: [formId], references: [id], onDelete: Cascade)
+  requireSignIn           Boolean             @default(false)
+  limitOneResponsePerUser Boolean             @default(false)
+  showProgressBar         Boolean             @default(true)
+  shuffleQuestions        Boolean             @default(false)
+  confirmationMessage     String              @default("Thank you for your submission!")
+  redirectUrl             String?
+  notifyOnSubmission      Boolean             @default(false)
+  notificationEmails      NotificationEmail[]
+
+  @@map("form_settings")
+}
+
+model NotificationEmail {
+  id             String       @id @default(uuid())
+  email          String
+  formSettings   FormSettings @relation(fields: [formSettingsId], references: [id], onDelete: Cascade)
+  formSettingsId String
+
+  @@map("notification_emails")
+}
+
+// ========================
+// Questions and Logic
+// ========================
+model Question {
+  id               String            @id @default(uuid())
+  formId           String
+  form             Form              @relation(fields: [formId], references: [id], onDelete: Cascade)
+  title            String
+  description      String?
+  type             String // text, paragraph, multipleChoice, etc.
+  isRequired       Boolean           @default(false)
+  options          Json?
+  order            Int
+  validation       Json?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  answers          Answer[]
+  conditionalLogic ConditionalLogic?
+
+  @@map("questions")
+}
+
+model ConditionalLogic {
+  id         String            @id @default(uuid())
+  questionId String            @unique
+  question   Question          @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  enabled    Boolean           @default(false)
+  rules      ConditionalRule[]
+
+  @@map("conditional_logic")
+}
+
+model ConditionalRule {
+  id                 String           @id @default(uuid())
+  conditionalLogicId String
+  conditionalLogic   ConditionalLogic @relation(fields: [conditionalLogicId], references: [id], onDelete: Cascade)
+  targetQuestionId   String
+  operator           String // equals, notEquals, etc.
+  value              String?
+  action             String           @default("show")
+
+  @@map("conditional_rules")
+}
+
+// ========================
+// Responses and Answers
+// ========================
+model Response {
+  id           String    @id @default(uuid())
+  formId       String
+  form         Form      @relation(fields: [formId], references: [id], onDelete: Cascade)
+  respondentId String    @default(uuid())
+  isCompleted  Boolean   @default(false)
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+  answers      Answer[]
+
+  @@map("responses")
+}
+
+model Answer {
+  id         String   @id @default(uuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  responseId String
+  response   Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  value      String?
+  fileUrl    String?
+  createdAt  DateTime @default(now())
+
+  @@map("answers")
+}
+
+// ========================
+// Analytics
+// ========================
+model FormVisit {
+  id        String   @id @default(uuid())
+  formId    String
+  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  visitedAt DateTime @default(now())
+  ipAddress String?
+  userAgent String?
+  referrer  String?
+
+  @@map("form_visits")
+}
