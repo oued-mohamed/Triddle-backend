@@ -800,6 +800,48 @@ async function getFormResponses(req, res, next) {
 }
 
 /**
+ * Get response count for a form
+ * @route GET /api/forms/:id/responses/count
+ */
+async function getFormResponseCount(req, res, next) {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // Check if form exists and belongs to user
+    const form = await prisma.form.findFirst({
+      where: {
+        id,
+        userId
+      }
+    });
+
+    if (!form) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Form not found'
+      });
+    }
+
+    // Get response count
+    const count = await prisma.response.count({
+      where: {
+        formId: id
+      }
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        count
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Track form visit
  * @route POST /api/forms/:id/visit
  * Public endpoint - no authentication required
@@ -852,5 +894,6 @@ module.exports = {
   getFormToFill,
   getFormAnalytics,
   getFormResponses,
+  getFormResponseCount, // Add the new function
   trackFormVisit
 };
