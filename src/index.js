@@ -17,7 +17,9 @@ const PORT = process.env.PORT || 5000;
 
 // Enhanced CORS configuration
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: process.env.CORS_ORIGIN ? 
+    [process.env.CORS_ORIGIN, 'http://localhost:5173', 'https://triddle-frontend00-git-main-meduds-projects.vercel.app'] : 
+    ['http://localhost:5173', 'https://triddle-frontend00-git-main-meduds-projects.vercel.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -49,6 +51,7 @@ app.get('/api/health', (req, res) => {
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date() });
 });
+
 // Add a debug endpoint in your backend
 app.get('/api/debug/form/:id', async (req, res) => {
   try {
@@ -64,6 +67,14 @@ app.get('/api/debug/form/:id', async (req, res) => {
 
 // API routes
 app.use('/api', routes);
+
+// Catch-all route for undefined routes
+app.use('*', (req, res) => {
+  res.status(404).json({
+    status: 'error',
+    message: `Cannot ${req.method} ${req.originalUrl}`
+  });
+});
 
 // Error handling middleware
 app.use(errorHandler);
