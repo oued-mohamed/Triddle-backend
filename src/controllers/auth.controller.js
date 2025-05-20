@@ -58,6 +58,12 @@ async function register(req, res, next) {
     });
   } catch (error) {
     next(error);
+    res.status(201).json({
+      status: 'success',
+      data: {
+        "message" :error
+      }
+    });
   }
 }
 
